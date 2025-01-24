@@ -1,0 +1,204 @@
+import java.util.*;
+
+public class cards {
+    public static void main(String[] args) {
+        // Initialize the deck of 52 cards
+        String[] suits = {"Hearts", "Diamonds", "Clubs", "Spades"};
+        String[] ranks = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"};
+        List<String> deck = new ArrayList<>();
+
+        for (String suit : suits) {
+            for (String rank : ranks) {
+                deck.add(rank + " of " + suit);
+            }
+        }
+
+        // Separate face cards (J, Q, K, A) from the deck
+        List<String> faceCards = new ArrayList<>();
+        List<String> remainingCards = new ArrayList<>();
+
+        for (String card : deck) {
+            if (card.startsWith("J") || card.startsWith("Q") || card.startsWith("K") || card.startsWith("A")) {
+                faceCards.add(card);
+            } else {
+                remainingCards.add(card);
+            }
+        }
+
+        // Shuffle the 16 face cards
+        Collections.shuffle(faceCards);
+
+        // Randomly pick 4 face cards
+        List<String> selectedFaceCards = new ArrayList<>(faceCards.subList(0, 4));
+
+        // Combine the 4 face cards with the remaining 36 cards
+        remainingCards.addAll(selectedFaceCards);
+
+        // Shuffle the combined deck
+        Collections.shuffle(remainingCards);
+
+        // Select a trump card and assign it to Player 1
+        String trumpCard = remainingCards.remove(0); // Top card becomes the trump card
+        System.out.println("Trump Card for this round: " + trumpCard);
+
+        // Distribute the remaining cards among players (e.g., 4 players)
+        int numberOfPlayers = 4;
+        List<List<String>> players = new ArrayList<>();
+
+        // Initialize empty hands for players
+        for (int i = 0; i < numberOfPlayers; i++) {
+            players.add(new ArrayList<>());
+        }
+
+        // Add the trump card to Player 1's hand
+        players.get(0).add(trumpCard);
+
+        // Distribute the remaining cards, starting from Player 2
+        int currentPlayer = 1;  // Start from Player 2
+        for (String card : remainingCards) {
+            players.get(currentPlayer).add(card);
+            currentPlayer = (currentPlayer + 1) % numberOfPlayers; // Move to the next player
+        }
+
+        // Display each player's hand
+        for (int i = 0; i < numberOfPlayers; i++) {
+            System.out.println("Player " + (i + 1) + "'s Hand: " + players.get(i));
+        }
+
+        // Player 1 initiates the game
+        int startingPlayer = 0; // Player 1 starts the first round
+        int round = 1;
+        boolean gameEnded = false;
+
+        // Create a scanner object for player input
+        Scanner scanner = new Scanner(System.in);
+
+        while (!gameEnded) {
+            System.out.println("\n--- Round " + round + " ---");
+            System.out.println("Player " + (startingPlayer + 1) + " initiates the game.");
+
+            // Each player plays a card in turn
+            List<String> cardsPlayed = new ArrayList<>();
+            for (int i = 0; i < numberOfPlayers; i++) {
+                int currentPlayerIndex = (startingPlayer + i) % numberOfPlayers;
+                gameEnded = playerTurn(players, currentPlayerIndex, scanner, cardsPlayed);
+                if (gameEnded) break;
+            }
+
+            if (gameEnded) break;
+
+            // Determine the winner of the round
+            String roundWinner = determineRoundWinner(cardsPlayed, trumpCard);
+            startingPlayer = Integer.parseInt(roundWinner.split(" ")[1]) - 1; // Winner starts next round
+            System.out.println("Winner of this round: " + roundWinner);
+
+            round++;
+        }
+    }
+
+    // Simulate a player's turn, allowing them to choose a card
+    public static boolean playerTurn(List<List<String>> players, int playerIndex, Scanner scanner, List<String> cardsPlayed) {
+        List<String> playerHand = players.get(playerIndex);
+
+        if (playerHand.isEmpty()) {
+            System.out.println("Player " + (playerIndex + 1) + " has no cards left to play.");
+            return true; // Game ends if the player has no cards
+        }
+
+        // Display player's hand
+        System.out.println("Player " + (playerIndex + 1) + "'s Hand: " + playerHand);
+
+        // Ask the player to choose a card
+        System.out.println("Player " + (playerIndex + 1) + ", choose a card to play (enter the index):");
+
+        // Show card options with indices
+        for (int i = 0; i < playerHand.size(); i++) {
+            System.out.println(i + ": " + playerHand.get(i));
+        }
+
+        // Read user input and validate the index
+        int cardIndex = -1;
+        while (cardIndex < 0 || cardIndex >= playerHand.size()) {
+            try {
+                cardIndex = Integer.parseInt(scanner.nextLine());
+                if (cardIndex < 0 || cardIndex >= playerHand.size()) {
+                    System.out.println("Invalid index. Please choose a valid card index.");
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter a number.");
+            }
+        }
+
+        // Play the chosen card
+        String chosenCard = playerHand.get(cardIndex);
+        playerHand.remove(cardIndex); // Remove the played card
+        cardsPlayed.add(chosenCard); // Add to the cards played in the round
+
+        // Display the card chosen by the player
+        System.out.println("Player " + (playerIndex + 1) + " plays: " + chosenCard);
+
+        return false; // Game continues
+    }
+
+    // Method to determine the winner of the round based on the hierarchy
+    public static String determineRoundWinner(List<String> cardsPlayed, String trumpCard) {
+        String trumpSuit = trumpCard.split(" of ")[1]; // Get the trump suit
+
+        // Rank map to help compare card ranks
+        Map<String, Integer> rankMap = new HashMap<>();
+        rankMap.put("2", 2);
+        rankMap.put("3", 3);
+        rankMap.put("4", 4);
+        rankMap.put("5", 5);
+        rankMap.put("6", 6);
+        rankMap.put("7", 7);
+        rankMap.put("8", 8);
+        rankMap.put("9", 9);
+        rankMap.put("10", 10);
+        rankMap.put("J", 11);
+        rankMap.put("Q", 12);
+        rankMap.put("K", 13);
+        rankMap.put("A", 14);
+
+        // Suit priority: Hearts > Diamonds > Spades > Clubs
+        Map<String, Integer> suitMap = new HashMap<>();
+        suitMap.put("Hearts", 4);
+        suitMap.put("Diamonds", 3);
+        suitMap.put("Spades", 2);
+        suitMap.put("Clubs", 1);
+
+        String highestCard = null;
+        int highestPlayerIndex = -1;
+
+        for (int i = 0; i < cardsPlayed.size(); i++) {
+            String card = cardsPlayed.get(i);
+            String cardRank = card.split(" of ")[0];
+            String cardSuit = card.split(" of ")[1];
+
+            if (highestCard == null) {
+                highestCard = card;
+                highestPlayerIndex = i;
+                continue;
+            }
+
+            String highestRank = highestCard.split(" of ")[0];
+            String highestSuit = highestCard.split(" of ")[1];
+
+            boolean isTrumpCard = cardSuit.equals(trumpSuit);
+            boolean isCurrentTrumpCard = highestSuit.equals(trumpSuit);
+
+            if (isTrumpCard && !isCurrentTrumpCard) {
+                highestCard = card;
+                highestPlayerIndex = i;
+            } else if (isTrumpCard == isCurrentTrumpCard) {
+                if (rankMap.get(cardRank) > rankMap.get(highestRank) ||
+                    (rankMap.get(cardRank).equals(rankMap.get(highestRank)) && suitMap.get(cardSuit) > suitMap.get(highestSuit))) {
+                    highestCard = card;
+                    highestPlayerIndex = i;
+                }
+            }
+        }
+
+        return "Player " + (highestPlayerIndex + 1);
+    }
+}
