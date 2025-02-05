@@ -1,0 +1,213 @@
+//that is thing which i explain to the deepseek 
+1. Objective : Score Point 
+2. Setup :
+a) 4 players 
+b) 10 cards each player 
+c)there is a special distribution rule where 1st you have to seprate all 16 face cards from the deck and remaning all 36 cards you have to suffle and add 4 random cards from the 16 faced card now you have total 40 cards than suffle it 
+d)when you distribute the cards among the players the 1st card is a trump card and all the family mamber of that card is consider as a trump card 
+3) Game Play :
+a) take biding from each palyer and remember that biding is not be gratter than 10 and not be zero of any player 
+b)1st round of game must be start by 1st player 
+c)winner of the last round must be start the next round match 
+d) record the winner of every round in your data for the declaration of winner after last round 
+4) Winning :
+a) trump card>A>k>Q>J>10>9>8>7>6>5>4>3>2
+b)if all player play trump card then A>k>Q>J>10>9>8>7>6>5>4>3>2
+c) if all the player plays the card  but none of the card is trump card than the winner will we either the player who start the round will be winner or the heigher hirearchy belongs from the family of card which one is plays by the start of the round player  
+d) the player who will win maximum rounds that one is the winner of game
+
+//here is the result 
+code is from below the lines 
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+// Card class representing a playing card
+class Card {
+    enum Suit { HEARTS, DIAMONDS, CLUBS, SPADES }
+    enum Rank {
+        TWO(2), THREE(3), FOUR(4), FIVE(5), SIX(6), SEVEN(7), EIGHT(8), NINE(9), TEN(10),
+        JACK(11), QUEEN(12), KING(13), ACE(14);
+
+        final int value;
+        Rank(int value) { this.value = value; }
+    }
+
+    final Suit suit;
+    final Rank rank;
+
+    Card(Suit suit, Rank rank) {
+        this.suit = suit;
+        this.rank = rank;
+    }
+
+    boolean isFaceCard() {
+        return rank.value >= 11;
+    }
+
+    @Override
+    public String toString() {
+        return rank + " of " + suit;
+    }
+}
+
+// Player class representing a game participant
+class Player {
+    List<Card> hand = new ArrayList<>();
+    int bid;
+    int roundsWon;
+
+    void addCard(Card card) { hand.add(card); }
+    void removeCard(Card card) { hand.remove(card); }
+    Card playRandomCard() {
+        if (hand.isEmpty()) return null;
+        return hand.remove(new Random().nextInt(hand.size()));
+    }
+}
+
+// Main game controller class
+public class CardGame {
+    private static final int NUM_PLAYERS = 4;
+    private static final int HAND_SIZE = 10;
+    private final List<Player> players = new ArrayList<>();
+    private Card.Suit trumpSuit;
+    private int currentStarterIndex;
+
+    public static void main(String[] args) {
+        new CardGame().startGame();
+    }
+
+    public void startGame() {
+        initializePlayers();
+        List<Card> deck = prepareDeck();
+        determineTrumpSuit(deck);
+        dealCards(deck);
+        collectBids();
+        playRounds();
+        declareWinner();
+    }
+
+    private void initializePlayers() {
+        for (int i = 0; i < NUM_PLAYERS; i++) {
+            players.add(new Player());
+        }
+    }
+
+    private List<Card> prepareDeck() {
+        List<Card> deck = new ArrayList<>();
+        // Create full deck
+        for (Card.Suit suit : Card.Suit.values()) {
+            for (Card.Rank rank : Card.Rank.values()) {
+                deck.add(new Card(suit, rank));
+            }
+        }
+
+        // Separate face cards
+        List<Card> faceCards = deck.stream()
+                .filter(Card::isFaceCard)
+                .collect(Collectors.toList());
+        
+        List<Card> nonFaceCards = deck.stream()
+                .filter(c -> !c.isFaceCard())
+                .collect(Collectors.toList());
+
+        // Shuffle and combine
+        Collections.shuffle(nonFaceCards);
+        Collections.shuffle(faceCards);
+        nonFaceCards.addAll(faceCards.subList(0, 4));
+        Collections.shuffle(nonFaceCards);
+        return nonFaceCards;
+    }
+
+    private void determineTrumpSuit(List<Card> deck) {
+        trumpSuit = deck.get(0).suit;
+        System.out.println("Trump suit is: " + trumpSuit);
+    }
+
+    private void dealCards(List<Card> deck) {
+        for (int i = 0; i < HAND_SIZE * NUM_PLAYERS; i++) {
+            players.get(i % NUM_PLAYERS).addCard(deck.get(i));
+        }
+    }
+
+    private void collectBids() {
+        Random rand = new Random();
+        for (Player player : players) {
+            player.bid = rand.nextInt(10) + 1;
+            System.out.println("Player bid: " + player.bid);
+        }
+    }
+
+    private void playRounds() {
+        currentStarterIndex = 0;
+        for (int round = 0; round < HAND_SIZE; round++) {
+            playRound(round + 1);
+        }
+    }
+
+    private void playRound(int roundNumber) {
+        System.out.println("\n--- Round " + roundNumber + " ---");
+        List<Card> playedCards = new ArrayList<>();
+        List<Player> playOrder = determinePlayOrder();
+
+        // Play cards
+        for (Player player : playOrder) {
+            Card played = player.playRandomCard();
+            playedCards.add(played);
+            System.out.println("Player plays: " + played);
+        }
+
+        // Determine winner
+        int winnerIndex = determineRoundWinner(playedCards, playOrder);
+        players.get(winnerIndex).roundsWon++;
+        currentStarterIndex = winnerIndex;
+        System.out.println("Round winner: Player " + winnerIndex);
+    }
+
+    private List<Player> determinePlayOrder() {
+        List<Player> order = new ArrayList<>();
+        for (int i = 0; i < NUM_PLAYERS; i++) {
+            order.add(players.get((currentStarterIndex + i) % NUM_PLAYERS));
+        }
+        return order;
+    }
+
+    private int determineRoundWinner(List<Card> playedCards, List<Player> playOrder) {
+        Card.Suit leadSuit = playedCards.get(0).suit;
+        
+        // Check for trump cards
+        List<Card> trumpCards = playedCards.stream()
+                .filter(c -> c.suit == trumpSuit)
+                .collect(Collectors.toList());
+
+        if (!trumpCards.isEmpty()) {
+            Card highestTrump = Collections.max(trumpCards, Comparator.comparingInt(c -> c.rank.value));
+            return playOrder.indexOf(players.get(playedCards.indexOf(highestTrump) % NUM_PLAYERS));
+        }
+
+        // Check for lead suit cards
+        List<Card> leadSuitCards = playedCards.stream()
+                .filter(c -> c.suit == leadSuit)
+                .collect(Collectors.toList());
+
+        if (!leadSuitCards.isEmpty()) {
+            Card highestLead = Collections.max(leadSuitCards, Comparator.comparingInt(c -> c.rank.value));
+            return playOrder.indexOf(players.get(playedCards.indexOf(highestLead) % NUM_PLAYERS));
+        }
+
+        // Default to starter
+        return currentStarterIndex;
+    }
+
+    private void declareWinner() {
+        System.out.println("\nFinal Results:");
+        Player winner = players.get(0);
+        for (Player player : players) {
+            System.out.println("Player rounds won: " + player.roundsWon);
+            if (player.roundsWon > winner.roundsWon) {
+                winner = player;
+            }
+        }
+        System.out.println("Game winner: Player " + players.indexOf(winner));
+    }
+}
